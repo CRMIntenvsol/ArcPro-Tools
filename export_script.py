@@ -347,14 +347,22 @@ kml.save(exportFolder + '\\KMZ\\Field Photographs.kml')
 # Resize Photographs
 arcpy.AddMessage('Resizing KMZ Photographs')
 
-for file in os.listdir(kmzPhotoFolder):
-	if 'Thumbs' not in file:
-		f_img = kmzPhotoFolder+"/"+file
-		img = Image.open(f_img)
-		width,height = img.size
-		if width > 1100 or height>1100:
-			img = img.resize((int(width*0.3),int(height*0.3)))
-			img.save(f_img)
+try:
+    for file in os.listdir(kmzPhotoFolder):
+        if 'Thumbs' not in file and file.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.tif')):
+            f_img = os.path.join(kmzPhotoFolder, file)
+            try:
+                img = Image.open(f_img)
+                width,height = img.size
+                if width > 1100 or height > 1100:
+                    # Use standard ANTIALIAS (LANCZOS) resampling for quality
+                    img = img.resize((int(width*0.3), int(height*0.3)), Image.Resampling.LANCZOS)
+                    img.save(f_img)
+                    arcpy.AddMessage(f'Resized: {file}')
+            except Exception as e:
+                arcpy.AddMessage(f'Error processing {file}: {e}')
+except Exception as e:
+    arcpy.AddMessage(f'Error accessing photo folder: {e}')
 
 arcpy.AddMessage('Making the KMZ')
 shutil.make_archive(f'{reportfolder}\Field Photographs', format='zip', root_dir=kmzFolder)
