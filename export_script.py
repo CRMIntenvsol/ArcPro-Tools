@@ -33,6 +33,9 @@ fieldFolder = cultFolder + '\\Field'
 fieldPhotoFolder = fieldFolder + '\\Photos'
 reportFolder = cultFolder + '\\Report'
 reportPhotoFolder = reportFolder + '\\Photos'
+reportResizedPhotoFolder = reportFolder + '\\Photos Resized'
+if not os.path.exists(reportResizedPhotoFolder):
+    os.makedirs(reportResizedPhotoFolder)
 kmzFolder = exportFolder+'\\KMZ'
 kmzPhotoFolder = kmzFolder + '\\Photos'
 kmzResizedPhotoFolder = kmzFolder + '\\Photos Resized'
@@ -357,6 +360,7 @@ try:
         if 'Thumbs' not in file and file.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.tif')):
             f_img = os.path.join(kmzPhotoFolder, file)
             f_img_resized = os.path.join(kmzResizedPhotoFolder, file)
+            f_report_img_resized = os.path.join(reportResizedPhotoFolder, file)
             try:
                 img = Image.open(f_img)
                 width,height = img.size
@@ -364,9 +368,11 @@ try:
                     # Use standard ANTIALIAS (LANCZOS) resampling for quality
                     img = img.resize((int(width*0.3), int(height*0.3)), Image.Resampling.LANCZOS)
                     img.save(f_img_resized)
+                    img.save(f_report_img_resized)
                 else:
                     # Just copy if it doesn't need resizing, to ensure consistency in the folder
                     img.save(f_img_resized)
+                    img.save(f_report_img_resized)
             except Exception as e:
                 failed_photos.append(f"{file} ({e})")
 except Exception as e:
