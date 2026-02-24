@@ -35,6 +35,9 @@ reportFolder = cultFolder + '\\Report'
 reportPhotoFolder = reportFolder + '\\Photos'
 kmzFolder = exportFolder+'\\KMZ'
 kmzPhotoFolder = kmzFolder + '\\Photos'
+kmzResizedPhotoFolder = kmzFolder + '\\Photos Resized'
+if not os.path.exists(kmzResizedPhotoFolder):
+    os.makedirs(kmzResizedPhotoFolder)
 shpFolder = exportFolder+'\\SHP'
 shpPhoto = geodb + '\\Photograph'
 workingFolder = exportFolder + '\\WorkingFiles'
@@ -333,7 +336,7 @@ for row in inputFile:
             p_descr = row.get(f'P{i}_Descr', '')
 
             # HTML generation
-            desc_html = f'<img src="Photos\\{p_name}" width="500px" border="0"></img><p>Photograph {p_name.replace(".jpg", "")}: {p_cat}, {p_descr}.</p>'
+            desc_html = f'<img src="Photos Resized\\{p_name}" width="500px" border="0"></img><p>Photograph {p_name.replace(".jpg", "")}: {p_cat}, {p_descr}.</p>'
             full_description += desc_html
 
     pnt = kml.newpoint(name=title, coords=[(long, lat)])  # creates the basic point
@@ -345,24 +348,36 @@ kml.save(exportFolder + '\\KMZ\\Field Photographs.kml')
 
 #============================================
 # Resize Photographs
-arcpy.AddMessage('Resizing KMZ Photographs')
+arcpy.AddMessage('Resizing Photographs')
+
+failed_photos = []
 
 try:
     for file in os.listdir(kmzPhotoFolder):
         if 'Thumbs' not in file and file.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.tif')):
             f_img = os.path.join(kmzPhotoFolder, file)
+            f_img_resized = os.path.join(kmzResizedPhotoFolder, file)
             try:
                 img = Image.open(f_img)
                 width,height = img.size
                 if width > 1100 or height > 1100:
                     # Use standard ANTIALIAS (LANCZOS) resampling for quality
                     img = img.resize((int(width*0.3), int(height*0.3)), Image.Resampling.LANCZOS)
-                    img.save(f_img)
-                    arcpy.AddMessage(f'Resized: {file}')
+                    img.save(f_img_resized)
+                else:
+                    # Just copy if it doesn't need resizing, to ensure consistency in the folder
+                    img.save(f_img_resized)
             except Exception as e:
-                arcpy.AddMessage(f'Error processing {file}: {e}')
+                failed_photos.append(f"{file} ({e})")
 except Exception as e:
     arcpy.AddMessage(f'Error accessing photo folder: {e}')
+
+if not failed_photos:
+    arcpy.AddMessage('Resized all photos successfully')
+else:
+    arcpy.AddMessage('Failed to resize the following photos:')
+    for failure in failed_photos:
+        arcpy.AddMessage(failure)
 
 arcpy.AddMessage('Making the KMZ')
 shutil.make_archive(f'{reportfolder}\Field Photographs', format='zip', root_dir=kmzFolder)
