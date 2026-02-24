@@ -160,10 +160,19 @@ arcpy.management.AddField(photoNew, "Easting", "DOUBLE", "", "", "", "", "NULLAB
 #calculating WGS_84 Northing/East for KML purposes
 arcpy.AddMessage('Calculating WGS_84 Northing/Eastin to Photograph SHP')
 try:
-	arcpy.management.CalculateField(photoNew, "Northing", "!SHAPE!.projectAs(arcpy.SpatialReference(4326).exportToString()).centroid.Y", "PYTHON3", "")
-	arcpy.management.CalculateField(photoNew, "Easting", "!SHAPE!.projectAs(arcpy.SpatialReference(4326).exportToString()).centroid.X", "PYTHON3", "")
-except:
-	arcpy.AddMessage("Northing/Easting not calculated, THIS NEEDS FIXED FOR THE KMZ")
+    sr_wgs84 = arcpy.SpatialReference(4326)
+    with arcpy.da.UpdateCursor(photoNew, ['SHAPE@', 'Northing', 'Easting']) as cursor:
+        for row in cursor:
+            if row[0]:
+                geom = row[0]
+                # Project geometry to WGS 1984
+                projected_geom = geom.projectAs(sr_wgs84)
+                # Get centroid coordinates (Y=Lat, X=Long)
+                row[1] = projected_geom.centroid.Y
+                row[2] = projected_geom.centroid.X
+                cursor.updateRow(row)
+except Exception as e:
+	arcpy.AddMessage(f"Northing/Easting not calculated, THIS NEEDS FIXED FOR THE KMZ. Error: {str(e)}")
 	pass
 
 #---------------------
